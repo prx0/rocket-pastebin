@@ -14,6 +14,7 @@ fn rocket() -> _ {
             routes::index, 
             routes::upload, 
             routes::get_by_id,
-            routes::delete_by_id
+            routes::delete_by_id,
+            routes::update_by_id
         ])
 }

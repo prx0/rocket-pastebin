@@ -3,7 +3,7 @@ pub use crate::pastebin::paste_id::PasteId;
 use crate::rocket;
 
 use rocket::fs::NamedFile;
-use rocket::response::{status, stream};
+use rocket::response::{status};
 use rocket::data::{Data, ToByteUnit};
 use rocket::tokio::fs;
 use std::env;
@@ -30,14 +30,13 @@ pub fn index() -> &'static str {
 pub async fn upload(paste: Data<'_>) -> Result<String, std::io::Error> {
     let id = PasteId::new();
     let filename = format!("upload/{id}", id = id);
-    
+
     let host = env::var("ROCKET_HOST").expect("ROCKET_HOST must be set");
     let port = env::var("ROCKET_PORT").expect("ROCKET_PORT must be set");
+    let file_upload_limit = env::var("FILE_UPLOAD_LIMIT").expect("FILE_UPLOAD_LIMIT must be set").parse::<i32>().unwrap();
 
     let url = format!("{host}:{port}{resource}/{id}\n", host = host, port = port, resource = HTTP_RESOURCE, id = id);
     
-    let file_upload_limit = env::var("FILE_UPLOAD_LIMIT").expect("FILE_UPLOAD_LIMIT must be set").parse::<i32>().unwrap();
-
     paste.open(file_upload_limit.kibibytes()).into_file(filename).await?;
     Ok(url)
 }
@@ -55,6 +54,18 @@ pub async fn delete_by_id(id: PasteId<'_>) -> Result<String, status::NotFound<St
     match fs::remove_file(file_path).await {
         Ok(_) => Ok(format!("pastebin {} deleted", id)),
         Err(_) => Err(status::NotFound(format!("pastebin {} not found", id)))
+    }
+}
+
+#[put("/<id>", data = "<paste>")]
+pub async fn update_by_id(id: PasteId<'_>, paste: Data<'_>) -> Result<String, status::NotFound<String>> {
+    match NamedFile::open(format!("upload/{}", id)).await {
+        Ok(file) => {
+            let file_upload_limit = env::var("FILE_UPLOAD_LIMIT").expect("FILE_UPLOAD_LIMIT must be set").parse::<i32>().unwrap();
+            paste.open(file_upload_limit.kibibytes()).into_file(file.path()).await.unwrap();
+            Ok(format!("pastebin {} updated", id))
+        },
+        Err(e) => Err(status::NotFound(format!("pastebin {}", e)))
     }
 }
 
@@ -109,6 +120,30 @@ mod test {
     fn test_delete_pastebin_which_not_exist() {
         let client = Client::tracked(rocket()).expect("valid rocket instance");
         let response = client.delete(format!("{}/test", HTTP_RESOURCE)).dispatch();
+        assert_eq!(response.status(), Status::NotFound);
+    }
+
+    #[test]
+    fn test_update_by_id() {
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
+        let _ = fs::File::create("upload/e62922ea-1d3a-4dc8-a5a3-52d973600bb9").expect("unable to write test file");
+
+        let body = b"Updated Pastebin";
+        let response = client.put(format!("{}/e62922ea-1d3a-4dc8-a5a3-52d973600bb9", HTTP_RESOURCE))
+            .body(body)
+            .dispatch();
+
+        assert_eq!(response.status(), Status::Ok);
+    }
+
+    #[test]
+    fn test_update_by_id_with_bad_id() {
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
+        let body = b"Updated Pastebin";
+        let response = client.put(format!("{}/test", HTTP_RESOURCE))
+            .body(body)
+            .dispatch();
+
         assert_eq!(response.status(), Status::NotFound);
     }
 }
