@@ -1,4 +1,4 @@
-use std::{ascii::AsciiExt, fmt};
+use std::{fmt};
 use std::borrow::Cow;
 use rocket::request::FromParam;
 
