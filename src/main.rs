@@ -10,5 +10,10 @@ fn rocket() -> _ {
 
     dotenv().ok();
     rocket::build()
-        .mount("/pastebin", routes![routes::index, routes::upload, routes::get_by_id])
+        .mount("/pastebin", routes![
+            routes::index, 
+            routes::upload, 
+            routes::get_by_id,
+            routes::delete_by_id
+        ])
 }

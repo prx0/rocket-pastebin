@@ -6,7 +6,7 @@ marp: false
 Based on https://rocket.rs/v0.5-rc/guide/pastebin/
 
 - [ ] Add a web form to the index where users can manually input new pastes. Accept the form at POST /. Use format and/or rank to specify which of the two POST /routes should be called.
-- [ ] Support deletion of pastes by adding a new DELETE /<id> route. Use PasteId to validate <id>.
+- [x] Support deletion of pastes by adding a new DELETE /<id> route. Use PasteId to validate <id>.
 - [ ] Indicate partial uploads with a 206 partial status code. If the user uploads a paste that meets or exceeds the allowed limit, return a 206 partial statuscode. Otherwise, return a 201 created status code.
 - [ ] Set the Content-Type of the return value in upload and retrieve to text/plain.
 Return a unique "key" after each upload and require that the key is present and matches when doing deletion. Use one of Rocket's core traits to do the keyvalidation.
