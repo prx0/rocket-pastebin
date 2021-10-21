@@ -2,10 +2,9 @@ pub use crate::pastebin::paste_id::PasteId;
 
 use crate::rocket;
 
-use rocket::response::status;
+use rocket::fs::NamedFile;
+use rocket::response::{status, stream};
 use rocket::data::{Data, ToByteUnit};
-use rocket::response::Debug;
-use rocket::route::Outcome;
 use rocket::tokio::fs;
 use std::env;
 
@@ -28,8 +27,8 @@ pub fn index() -> &'static str {
 }
 
 #[post("/", data = "<paste>")]
-pub async fn upload(paste: Data<'_>) -> Result<String, Debug::<std::io::Error>> {
-    let id = PasteId::new(10);
+pub async fn upload(paste: Data<'_>) -> Result<String, std::io::Error> {
+    let id = PasteId::new();
     let filename = format!("upload/{id}", id = id);
     
     let host = env::var("ROCKET_HOST").expect("ROCKET_HOST must be set");
@@ -44,9 +43,9 @@ pub async fn upload(paste: Data<'_>) -> Result<String, Debug::<std::io::Error>> 
 }
 
 #[get("/<id>")]
-pub async fn get_by_id(id: PasteId<'_>) -> Option<fs::File> {
+pub async fn get_by_id(id: PasteId<'_>) -> Option<NamedFile> {
     let filename = format!("upload/{id}", id = id);
-    fs::File::open(&filename).await.ok()
+    NamedFile::open(&filename).await.ok()
 }
 
 #[delete("/<id>")]
@@ -82,11 +81,11 @@ mod test {
     #[test]
     fn test_get_by_id() {
         let client = Client::tracked(rocket()).expect("valid rocket instance");
-        let mut test_file = fs::File::create("upload/testfile").expect("unable to write test file");
+        let mut test_file = fs::File::create("upload/18ab80ae-c00e-4f72-b6f3-f4e2233a8b68").expect("unable to write test file");
         let test_file_content= b"Hello, world!";
         let _ = test_file.write(test_file_content);
 
-        let response = client.get(format!("{}/{}", HTTP_RESOURCE, "testfile")).dispatch();
+        let response = client.get(format!("{}/{}", HTTP_RESOURCE, "18ab80ae-c00e-4f72-b6f3-f4e2233a8b68")).dispatch();
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_bytes().unwrap(), test_file_content);
     }
@@ -101,8 +100,8 @@ mod test {
     #[test]
     fn test_delete_by_id() {
         let client = Client::tracked(rocket()).expect("valid rocket instance");
-        let _ = fs::File::create("upload/filetoremove").expect("unable to write test file");
-        let response = client.delete(format!("{}/{}", HTTP_RESOURCE, "filetoremove")).dispatch();
+        let _ = fs::File::create("upload/a8b5e8bd-3b35-4865-886a-8103c5c27909").expect("unable to write test file");
+        let response = client.delete(format!("{}/{}", HTTP_RESOURCE, "a8b5e8bd-3b35-4865-886a-8103c5c27909")).dispatch();
         assert_eq!(response.status(), Status::Ok);
     }
 
