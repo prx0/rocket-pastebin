@@ -1,3 +1,5 @@
+// Module for pastebin
+
 pub mod models;
 pub mod routes;
 
@@ -6,6 +8,7 @@ use std::time::{Duration, SystemTime};
 use std::fs;
 use log;
 
+// Remove old pastebins
 pub fn clean_old_pastes() {
     let paths = fs::read_dir("upload")
         .expect("unable to read files from upload directory");

@@ -1,0 +1,22 @@
+ {% extends "tera/base" %} {% block content %}
+
+<form action="/api/pastebin" method="post">
+    <fieldset class="pure-group">
+        <h2>Upload a pastebin</h2>
+        <textarea name="content" placeholder="Paste something to send"></textarea><br>
+        <select name="lang">
+            <option value="c" selected>Language C</option>
+            <option value="cpp">Language C++</option>
+            <option value="csharp">Language C#</option>
+            <option value="ruby">Language Ruby</option>
+            <option value="js">Language Javascript</option>
+            <option value="xml">Language XML</option>
+            <option value="css">Language CSS</option>
+            <option value="rust">Language Rust</option>
+        </select>
+        <center>
+            <button type="submit">Upload</button>
+        </center>
+    </fieldset>
+</form>
+{% endblock content %}

@@ -1,0 +1,7 @@
+{% extends "tera/base" %} {% block content %}
+
+<fieldset class="pure-group">
+    <pre><code class="{{ lang }}">{{ content }}</code></pre>
+    <a href="/">Back to home page</a>
+</fieldset>
+{% endblock content %}
