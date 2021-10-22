@@ -1,33 +1,28 @@
-pub use crate::pastebin::paste_id::PasteId;
+pub use crate::pastebin::models::PasteId;
+pub use crate::pastebin::models::SendPastebin;
 
 use crate::rocket;
 
+use rocket::form::Form;
 use rocket::fs::NamedFile;
 use rocket::response::{status};
 use rocket::data::{Data, ToByteUnit};
 use rocket::tokio::fs;
+use rocket::tokio::io::AsyncWriteExt;
+use rocket_dyn_templates::Template;
 use std::env;
+
+use rocket::http::ContentType;
 
 const HTTP_RESOURCE: &str = "/pastebin";
 
 #[get("/")]
-pub fn index() -> &'static str {
-    "
-    USAGE
-
-      POST /
-
-          accepts raw data in the body of the request and responds with a URL of
-          a page containing the body's content
-
-      GET /<id>
-
-          retrieves the content for the paste with id `<id>`
-    "
+pub fn index() -> Template {
+    Template::render("index")
 }
 
-#[post("/", data = "<paste>")]
-pub async fn upload(paste: Data<'_>) -> Result<String, std::io::Error> {
+#[post("/", data = "<paste>", rank = 2)]
+pub async fn upload(paste: Data<'_>) -> Result<(ContentType, String), std::io::Error> {
     let id = PasteId::new();
     let filename = format!("upload/{id}", id = id);
 
@@ -38,7 +33,20 @@ pub async fn upload(paste: Data<'_>) -> Result<String, std::io::Error> {
     let url = format!("{host}:{port}{resource}/{id}\n", host = host, port = port, resource = HTTP_RESOURCE, id = id);
     
     paste.open(file_upload_limit.kibibytes()).into_file(filename).await?;
-    Ok(url)
+    Ok((ContentType::Text, url))
+}
+
+#[post("/", data = "<paste_form>")]
+pub async fn upload_form(mut paste_form: Form<SendPastebin<'_>>) -> Result<(ContentType, String), std::io::Error> {
+    let id = PasteId::new();
+    let filename = format!("upload/{id}", id = id);
+    
+    paste_form.file.persist_to(&filename).await?;
+
+    let mut new_file = fs::File::create(&filename).await.expect(&format!("unable to create file {}", filename));
+    new_file.write_all(&paste_form.raw_content.as_bytes()).await.expect(&format!("unable to write on file {}", filename));
+
+    Ok((ContentType::Text, format!("yes!")))
 }
 
 #[get("/<id>")]

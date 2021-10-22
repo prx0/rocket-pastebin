@@ -1,6 +1,8 @@
 use std::{fmt};
 use std::borrow::Cow;
 use rocket::request::FromParam;
+use rocket::fs::TempFile;
+use rocket::form::FromForm;
 use uuid::Uuid;
 
 /// A _probably_ unique paste ID.
@@ -29,7 +31,17 @@ impl<'a> FromParam<'a> for PasteId<'a> {
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         match Uuid::parse_str(param) {
             Ok(id) => Ok(PasteId(format!("{}", id).into())),
-            Err(e) => Err(param)
+            Err(_) => Err(param)
         }
     }
+}
+
+
+#[derive(FromForm)]
+pub struct SendPastebin<'a> {
+    #[field(name = "content")]
+    pub raw_content: String,
+
+    #[field(name = "file")]
+    pub file: TempFile<'a>
 }
