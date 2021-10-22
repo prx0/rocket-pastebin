@@ -61,7 +61,9 @@ pub async fn upload(paste: Data<'_>) -> Result<(ContentType, String), std::io::E
     let port = env::var("ROCKET_PORT").expect("ROCKET_PORT must be set");
     let url = format!("{host}:{port}{resource}/{id}\n", host = host, port = port, resource = HTTP_RESOURCE, id = id);
     
-    paste.open(128.kibibytes()).into_file(filename).await?;
+    let limit = env::var("FILE_SIZE_UPLOAD_LIMIT").expect("FILE_SIZE_UPLOAD_LIMIT must be set").parse::<u64>().unwrap();
+
+    paste.open(limit.kibibytes()).into_file(filename).await?;
     Ok((ContentType::Text, url))
 }
 
@@ -107,7 +109,8 @@ pub async fn delete_by_id(id: PasteId<'_>) -> Result<String, status::NotFound<St
 pub async fn update_by_id(id: PasteId<'_>, paste: Data<'_>) -> Result<String, status::NotFound<String>> {
     match NamedFile::open(format!("upload/{}", id)).await {
         Ok(file) => {
-            paste.open(128.kibibytes()).into_file(file.path()).await.unwrap();
+            let limit = env::var("FILE_SIZE_UPLOAD_LIMIT").expect("FILE_SIZE_UPLOAD_LIMIT must be set").parse::<u64>().unwrap();
+            paste.open(limit.kibibytes()).into_file(file.path()).await.unwrap();
             Ok(format!("pastebin {} updated", id))
         },
         Err(e) => Err(status::NotFound(format!("pastebin {}", e)))
@@ -121,13 +124,17 @@ mod test {
     use crate::pastebin::routes::HTTP_RESOURCE;
 
     use super::rocket;
+    use dotenv::dotenv;
     use rocket::local::blocking::Client;
     use rocket::http::Status;
     use std::fs;
     use std::io::Write;
 
+
     #[test]
     fn test_upload() {
+        dotenv().ok();
+
         let client = Client::tracked(rocket()).expect("valid rocket instance");
         let body = "Hello, world!";
         let response = client.post(HTTP_RESOURCE)
@@ -172,6 +179,8 @@ mod test {
 
     #[test]
     fn test_update_by_id() {
+        dotenv().ok();
+
         let client = Client::tracked(rocket()).expect("valid rocket instance");
         let _ = fs::File::create("upload/e62922ea-1d3a-4dc8-a5a3-52d973600bb9").expect("unable to write test file");
 

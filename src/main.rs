@@ -1,5 +1,5 @@
 #[macro_use] extern crate rocket;
-extern crate rocket_dyn_templates;
+#[macro_use] extern crate rocket_dyn_templates;
 
 pub mod pastebin;
 

@@ -8,6 +8,7 @@ use std::time::{Duration, SystemTime};
 use std::fs;
 use log;
 
+
 // Remove old pastebins
 pub fn clean_old_pastes() {
     let paths = fs::read_dir("upload")
@@ -19,12 +20,9 @@ pub fn clean_old_pastes() {
         let modification_sys_time = metadata.modified().unwrap();
         let now_sys_time = SystemTime::now();
         let age_of_file = now_sys_time.duration_since(modification_sys_time).unwrap();
-        let file_lifetime_duration = env::var("FILE_LIFETIME_DURATION")
-            .expect("FILE_LIFETIME_DURATION must be set")
-            .parse::<u64>()
-            .unwrap();
-            
-        let limit_duration = Duration::from_secs(file_lifetime_duration);
+
+        // 5 minutes by default
+        let limit_duration = Duration::from_secs(300);
     
         if age_of_file >= limit_duration {
             let _ = match fs::remove_file(&path_str) {
