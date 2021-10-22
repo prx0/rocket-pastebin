@@ -9,7 +9,7 @@ Based on https://rocket.rs/v0.5-rc/guide/pastebin/
 - [x] Add a PUT /<id> route that allows a user with the key for <id> to replace the existing paste, if any.
 - [ ] Add a new route, GET /<id>/<lang> that syntax highlights the paste with ID <id> for language <lang>. If <lang> is not a known language, do no highlighting. Possibly validate <lang> with FromParam.
 - [x] Use the local module to write unit tests for your pastebin.
-- [ ] Dispatch a thread before launching Rocket in main that periodically cleans up idling old pastes in upload/.
+- [x] Dispatch a thread before launching Rocket in main that periodically cleans up idling old pastes in upload/.
 
 ## Run test 
 
