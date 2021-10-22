@@ -3,12 +3,21 @@
 pub mod pastebin;
 
 use dotenv::dotenv;
+use std::thread;
+use std::time::Duration;
 
 #[launch]
 fn rocket() -> _ {
     use pastebin::routes;
-
     dotenv().ok();
+
+    thread::spawn(|| {
+        loop {
+            pastebin::clean_old_pastes();
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+
     rocket::build()
         .mount("/pastebin", routes![
             routes::index, 
