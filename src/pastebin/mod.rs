@@ -1,10 +1,14 @@
-pub mod paste_id;
+// Module for pastebin
+
+pub mod models;
 pub mod routes;
 
 use std::env;
 use std::time::{Duration, SystemTime};
 use std::fs;
+use log;
 
+// Remove old pastebins
 pub fn clean_old_pastes() {
     let paths = fs::read_dir("upload")
         .expect("unable to read files from upload directory");
@@ -23,8 +27,10 @@ pub fn clean_old_pastes() {
         let limit_duration = Duration::from_secs(file_lifetime_duration);
     
         if age_of_file >= limit_duration {
-            let _ = fs::remove_file(&path_str)
-                .expect(&format!("unable to remove file {}", path_str.display()));
+            let _ = match fs::remove_file(&path_str) {
+                Ok(_) => log::info!("pastebin {} removed", path_str.display()),
+                Err(e) => log::error!("{}", e)
+            };
         }   
     }
 }

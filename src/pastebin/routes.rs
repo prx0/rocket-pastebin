@@ -1,51 +1,95 @@
-pub use crate::pastebin::paste_id::PasteId;
+pub use crate::pastebin::models::PasteId;
+pub use crate::pastebin::models::Lang;
+pub use crate::pastebin::models::SendPastebin;
 
 use crate::rocket;
 
+use rocket::form::Form;
 use rocket::fs::NamedFile;
 use rocket::response::{status};
 use rocket::data::{Data, ToByteUnit};
 use rocket::tokio::fs;
-use std::env;
+use rocket::tokio::io::AsyncWriteExt;
+use rocket::response::Redirect;
+use rocket::http::ContentType;
 
-const HTTP_RESOURCE: &str = "/pastebin";
+use rocket_dyn_templates::{Template, tera};
+
+use std::env;
+use std::str::from_utf8;
+
+const HTTP_RESOURCE: &str = "/api/pastebin";
+
+// Return the home page
+// used for web view 
 
 #[get("/")]
-pub fn index() -> &'static str {
-    "
-    USAGE
-
-      POST /
-
-          accepts raw data in the body of the request and responds with a URL of
-          a page containing the body's content
-
-      GET /<id>
-
-          retrieves the content for the paste with id `<id>`
-    "
+pub fn index() -> Template {
+    let mut context = tera::Context::new();
+    context.insert("title", "Upload a pastebin");
+    Template::render("tera/index", &context.into_json())
 }
 
-#[post("/", data = "<paste>")]
-pub async fn upload(paste: Data<'_>) -> Result<String, std::io::Error> {
+// Return the pastebin with the correct language for highlight
+// used for web view
+
+#[get("/<id>/<lang>")]
+pub async fn show_pastebin(id: PasteId<'_>, lang: Lang<'_>) -> Result<Template, status::NotFound<String>> {
+    let filename = format!("upload/{id}", id = &id);
+    match fs::read(&filename).await {
+        Ok(content) => {
+            let mut context = tera::Context::new();
+            context.insert("content", from_utf8(&content).unwrap());
+            context.insert("title", &format!("Pastebin {}", id));
+            context.insert("lang", &format!("{}", &lang));
+            Ok(Template::render("tera/pastebin/show", context.into_json()))
+        },
+        Err(_) => Err(status::NotFound(format!("pastebin {} not found", id)))
+    }
+}
+
+
+// Create a new pastebin
+// Endpoint API
+
+#[post("/", data = "<paste>", rank = 2)]
+pub async fn upload(paste: Data<'_>) -> Result<(ContentType, String), std::io::Error> {
     let id = PasteId::new();
     let filename = format!("upload/{id}", id = id);
 
     let host = env::var("ROCKET_HOST").expect("ROCKET_HOST must be set");
     let port = env::var("ROCKET_PORT").expect("ROCKET_PORT must be set");
-    let file_upload_limit = env::var("FILE_UPLOAD_LIMIT").expect("FILE_UPLOAD_LIMIT must be set").parse::<i32>().unwrap();
-
     let url = format!("{host}:{port}{resource}/{id}\n", host = host, port = port, resource = HTTP_RESOURCE, id = id);
     
-    paste.open(file_upload_limit.kibibytes()).into_file(filename).await?;
-    Ok(url)
+    paste.open(128.kibibytes()).into_file(filename).await?;
+    Ok((ContentType::Text, url))
 }
+
+// Create a new pastebin and redirect to show_pastebin if success
+// used for web view
+
+#[post("/", data = "<paste_form>")]
+pub async fn upload_form(mut paste_form: Form<SendPastebin>) -> Result<(ContentType, Redirect), std::io::Error> {
+    let id = PasteId::new();
+    let filename = format!("upload/{id}", id = id);
+
+    let mut new_file = fs::File::create(&filename).await.expect(&format!("unable to create file {}", filename));
+    new_file.write_all(&paste_form.raw_content.as_bytes()).await.expect(&format!("unable to write on file {}", filename));
+
+    Ok((ContentType::Text, Redirect::to(format!("/{}/{}", id, paste_form.lang))))
+}
+
+// Get an existing pastebin by id
+// Endpoint API
 
 #[get("/<id>")]
 pub async fn get_by_id(id: PasteId<'_>) -> Option<NamedFile> {
     let filename = format!("upload/{id}", id = id);
     NamedFile::open(&filename).await.ok()
 }
+
+// Delete an existing pastebin by id
+// Endpoint API
 
 #[delete("/<id>")]
 pub async fn delete_by_id(id: PasteId<'_>) -> Result<String, status::NotFound<String>> {
@@ -57,17 +101,20 @@ pub async fn delete_by_id(id: PasteId<'_>) -> Result<String, status::NotFound<St
     }
 }
 
+// Update an existing pastebin by id
+// Endpoint API
 #[put("/<id>", data = "<paste>")]
 pub async fn update_by_id(id: PasteId<'_>, paste: Data<'_>) -> Result<String, status::NotFound<String>> {
     match NamedFile::open(format!("upload/{}", id)).await {
         Ok(file) => {
-            let file_upload_limit = env::var("FILE_UPLOAD_LIMIT").expect("FILE_UPLOAD_LIMIT must be set").parse::<i32>().unwrap();
-            paste.open(file_upload_limit.kibibytes()).into_file(file.path()).await.unwrap();
+            paste.open(128.kibibytes()).into_file(file.path()).await.unwrap();
             Ok(format!("pastebin {} updated", id))
         },
         Err(e) => Err(status::NotFound(format!("pastebin {}", e)))
     }
 }
+
+// Test for Endpoint API
 
 #[cfg(test)]
 mod test {

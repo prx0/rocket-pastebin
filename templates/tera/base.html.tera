@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="/style.css">
+    <link href="/prism.css" rel="stylesheet" />
+    <title>{{ title }}</title>
+</head>
+
+<body>
+    <script src="/prism.js"></script>
+    <main>
+        {% block content %}{% endblock content %}
+    </main>
+</body>
+
+</html>
