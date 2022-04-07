@@ -11,6 +11,7 @@ Based on https://rocket.rs/v0.5-rc/guide/pastebin/
 - [x] Use the local module to write unit tests for your pastebin.
 - [x] Dispatch a thread before launching Rocket in main that periodically cleans up idling old pastes in upload/.
 
+
 ## How to use ?
 
 ``` sh
@@ -21,6 +22,8 @@ Then, go open your browser and go to `http://127.0.0.1:8000`.
 
 You can post a pastebin from a web page. Select the language and see the pastebin with syntax highlight using Prism.js
 
+![homepage](./.img/homepage.png)
+![example](./.img/example.png)
 
 ## Run test 
 
